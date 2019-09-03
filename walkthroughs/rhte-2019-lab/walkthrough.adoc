@@ -12,7 +12,7 @@ includes Red Hat Agile Integration and Red Hat Open Application Runtimes
 (RHOAR) as hosted managed services configured with shared identity configured
 using Red Hat Single Sign On (RH SSO). Each of the services you use as part
 of this walkthrough can be logged into using the same credentials you used to
-login to the Solution Explorer (this UI you're currently using) and OpenShift
+log in to the Solution Explorer (this UI you're currently using) and OpenShift
 Cluster.
 
 The high-level flow in the architecture is described below:
@@ -95,8 +95,8 @@ to open the *Project* in the OpenShift. A PostgreSQL database has already been
 deployed into this *Project*. You will be using this database throughout this
 walkthrough.
 
-=== Exploring the Project Namespce
-You will get familiar with the *Overivew*,
+=== Exploring the Project Namespace
+You will get familiar with the *Overview*,
 *Deployment Config*, *Deployment*, and *Secrets* screens from the OpenShift
 Console in this section.
 
@@ -161,9 +161,7 @@ temporarily unavailable it should not prevent a customer sending requests
 to the Order API. Using AMQ in this architecture enables you to rollout
 internal updates without affecting service availability.
 
-. Open the link:{enmasse-url}[AMQ Online Console, window="_blank"]. Login
-if prompted to do so.
-. Select *Address* from the side menu.
+. Open the link:{enmasse-url}[AMQ Online Console, window="_blank"]. Log in if prompted to do so.
 . Click the *Create* button in the main content area. The *Create new address* dialog appears.
 . Enter the `received-orders` in the *Name* field.
 . Select `queue` as the *Type*.
@@ -186,14 +184,82 @@ not appear follow the steps again or contact your administrator.
 [time=10]
 == Create an OpenAPI Spec for the Order API using Apicurito
 
+Apicurito is a version of the link:https://www.apicur.io/[Apicurio Studio] project which provides an intuitive interface to create or edit and existing OpenAPI specification and export the result as `yaml` or `json` file.
+We'll create a basic specification for our Order API.
+
 . Navigate to the link:{apicurio-url}[Apicurito Console, window="_blank", id="resources-apicurio-url"].
-. Step B
-. C
-. D
++
+. Click *New API*.
++
+. Hover on _New API_ name on the top of the screen and click the edit (pencil) icon. Change the name to _Order API_ and click *Save* (or press Enter).
++
+. In the _Design_ tab you can fill the fields under _Info_ section, and other sections:
+.. Keep the default _Version_, _Consumes_ and _Produces_ fields.
+.. Change the _Description_ value, for example, _"Order API allows adding orders to the system"_.
+.. The API will not be secured at this point, so skip the _Security Schemes_ and _Security Requirements_ sections.
+.. Optionally add _Contact_, _Licence_ and _Tag Definitions_.
++
+. Add a new data type for order item:
+.. Click *Add a data type* link or a "plus" icon in _Data Types_ section.
+.. In point 1, enter `Item` in the _Name_ field, and optionally, add a description (e.g. `Order item`).
+.. In point 2, enter the following JSON example:
++
+....
+{
+    "sku": "id",
+    "quantity": 1,
+    "price": 120,
+    "currency": "USD"
+}
+....
+.. In point 3, select _No Resource_.
+.. Click **Save**.
+.. Verify that the data type properties have been created.
+.. For each of the properties click on the type and select _Property is **Required**_.
++
+. Add a new data type for order:
+.. Click on the "plus" icon in _Data Types_ section.
+.. In point 1, enter `Order` in the _Name_ field, and optionally, add a description (e.g. `Order details`).
+.. In point 2, enter the following JSON example:
++
+....
+{
+    "id": "id",
+    "items": [],
+    "shipping_address": "6601 Adventure Way, Orlando, FL 32819"
+}
+....
+.. In point 3, select _REST Resource_.
+.. Click **Save**.
+.. Verify that the data type properties have been created.
+.. Click on the type of `items` property, select __Property is **Required**__. Below set __Type: **Array** of **Item**__.
++
+. Check the _Paths_ section:
+.. Note that two paths were created: `/orders` and `/orders/{orderId}`. They were created because of _REST Resource_ was specified for the Order type, so REST endpoints have been defined automatically.
+.. Click on each path and see what methods are exposed.
+.. Click on each method (`GET`, `POST` etc.) and check the general info, parameters, request and response body.
++
+. Click on _Order API_ title, and then select _Source_ tab. You will see the YAML representation of the specification (can be switched to JSON by clicking on *As JSON* in the top right corner). Add the following fields:
+.. `host: echo-api.3scale.net` (this is a temporary value and will be changed in next steps)
+.. `basePath: /api/v1` (this is a prefix that will be added to all endpoints)
+.. `schemes` field:
++
+....
+schemes:  
+  - http
+....
+.. Click *Save* when finished.
++
+. Open the drop-down menu of the *Save As...* button and select _Save as JSON_. Enter the name `order-api-openapi-spec.json` and save to a local directory.
+. Save the full path to the file as environment variable `API_SPEC_FILE`
++
+....
+export API_SPEC_FILE=/full/path/to/file/order-api-openapi-spec.json
+....
 
 [type=verification]
 ====
-Did you successfully download a JSON or YAML API definition file?
+Did you successfully download the JSON API definition file?
 ====
 
 [type=verificationFail]
@@ -217,14 +283,20 @@ it to your path, and execute `chmod +x` on the binary.
 Follow this section if you'd like to create a Spring application. If you'd
 rather use Node.js, scroll down to the next section.
 
+. Set the environment variable `CODE_LOCATION` with the value of the path where you want the code to be generated.
++
+....
+export CODE_LOCATION=order-api-spring
+....
++
 . Generate the boilerplate code for your Orders API by issuing the following command:
 +
 [subs="attributes+"]
 ----
-npx @openapitools/openapi-generator-cli@cli-4.0.3 generate -i $API_SPEC_FILE -g spring -o $LOCATION
+npx @openapitools/openapi-generator-cli@cli-4.0.3 generate -i $API_SPEC_FILE -g spring -o $CODE_LOCATION
 ----
 +
-. TODO: Steps for Java developers to connect to message queue.
+. **TODO:** Steps for Java developers to connect to message queue.
 
 {empty} +
 
@@ -233,7 +305,7 @@ deploy your application on OpenShift using ODO.
 
 . Run `mvn package` from the Spring project root directory. This generates a
 JAR file for Spring the application.
-. Login to the OpenShift Cluster using `odo login {openshift-host}`. You'll be
+. Log in to the OpenShift Cluster using `odo login {openshift-host}`. You'll be
 prompted for your username and password.
 . Set the current ODO context to the *Project* created for this lab by running
 `odo project set {walkthrough-namespace}`.
@@ -254,13 +326,20 @@ requests through the 3scale AMP on the cluster.
 
 === Node.js Developers (Node.js Express): Connecting to AMQ
 
-. Generate the boilerplate code for your Orders API by issuing the following
-command:
+. Set the environment variable `CODE_LOCATION` with the value of the path where you want the code to be generated.
++
+....
+export CODE_LOCATION=order-api-node
+....
++
+. Generate the boilerplate code for your Orders API by issuing the following command:
 +
 [subs="attributes+"]
 ----
-npx @openapitools/openapi-generator-cli@cli-4.0.3 generate -i $API_SPEC_FILE -g nodejs-server-deprecated -o $LOCATION
+npx @openapitools/openapi-generator-cli@cli-4.1.1  generate -i $API_SPEC_FILE -g nodejs-express-server -o $CODE_LOCATION
 ----
++
+*NOTE:* `nodejs-express-server` generator is currently in `beta`.
 +
 . TODO: Steps for Node.js developers to connect to message queue.
 
@@ -269,7 +348,7 @@ npx @openapitools/openapi-generator-cli@cli-4.0.3 generate -i $API_SPEC_FILE -g 
 Now that you've implemented the code to connect to the orders queue, you can
 deploy your application on OpenShift using ODO.
 
-. Login to the OpenShift Cluster using `odo login {openshift-host}`. You'll be
+. Log in to the OpenShift Cluster using `odo login {openshift-host}`. You'll be
 prompted for your username and password.
 . Set the current ODO context to the *Project* created for this lab by running
 `odo project set {walkthrough-namespace}`.
